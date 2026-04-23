@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Calcolatore Pignoramento PA</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+/* ── Tokens ──────────────────────────────────────────────── */
+:root {
+  --ff-h: 'Outfit', system-ui, sans-serif;
+  --ff-b: 'DM Sans', system-ui, sans-serif;
+  --ff-m: 'JetBrains Mono', monospace;
+  --c-bg:#f4f3ef; --c-surf:#faf9f6; --c-surf2:#ffffff; --c-raised:#f0eeea;
+  --c-brd:#e0ddd6; --c-div:#e8e6e1;
+  --c-txt:#1c1a15; --c-muted:#6b6760; --c-faint:#a09d97;
+  --c-pri:#006b6f; --c-pri-dk:#004d51; --c-pri-lt:#e0f0f0; --c-pri-mid:#ccebeb;
+  --c-acc:#b8571a; --c-ok:#3a7a1a; --c-ok-bg:#edf7e5;
+  --c-warn:#855e00; --c-warn-bg:#fdf5df;
+  --c-err:#9b2255; --c-err-bg:#fbeef5;
+  --c-inv:#f8f7f3;
+  --r-sm:.375rem; --r-md:.625rem; --r-lg:1rem; --r-xl:1.375rem; --r-2xl:1.75rem;
+  --sh-sm:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+  --sh-md:0 4px 16px rgba(0,0,0,.07),0 1px 4px rgba(0,0,0,.05);
+  --sh-lg:0 12px 40px rgba(0,0,0,.09),0 4px 12px rgba(0,0,0,.06);
+}
+[data-theme="dark"] {
+  --c-bg:#131210; --c-surf:#1a1916; --c-surf2:#1f1e1b; --c-raised:#242320;
+  --c-brd:#2e2d29; --c-div:#282723;
+  --c-txt:#e8e5de; --c-muted:#9c9992; --c-faint:#666360;
+  --c-pri:#3fa5ab; --c-pri-dk:#59bfc5; --c-pri-lt:#1a3535; --c-pri-mid:#1e3e3e;
+  --c-acc:#d4773c; --c-ok:#6daa40; --c-ok-bg:#1a2e0f;
+  --c-warn:#d4a820; --c-warn-bg:#2a2208;
+  --c-err:#cc5090; --c-err-bg:#2a0f1c;
+  --c-inv:#131210;
+  --sh-sm:0 1px 3px rgba(0,0,0,.25);
+  --sh-md:0 4px 16px rgba(0,0,0,.3);
+  --sh-lg:0 12px 40px rgba(0,0,0,.4);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:none}
+body{min-height:100vh;font-family:var(--ff-b);font-size:clamp(.9375rem,.88rem+.28vw,1.0625rem);line-height:1.55;background:var(--c-bg);color:var(--c-txt);transition:background .2s,color .2s}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;border:none;background:none}
+:focus-visible{outline:2px solid var(--c-pri);outline-offset:3px;border-radius:4px}
+
+/* ── Shell ───────────────────────────────────────────────── */
+.shell{max-width:1200px;margin:0 auto;padding:clamp(1rem,2vw,1.5rem) clamp(.75rem,2vw,1.25rem) clamp(2.5rem,5vw,4rem)}
+
+/* ── Topbar ──────────────────────────────────────────────── */
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:1rem;margin-bottom:clamp(1.25rem,3vw,2rem)}
+.brand{display:flex;align-items:center;gap:.75rem}
+.logo{width:42px;height:42px;border-radius:12px;background:var(--c-pri);display:grid;place-items:center;color:var(--c-inv);box-shadow:var(--sh-sm);flex-shrink:0}
+.logo svg{width:22px;height:22px}
+.brand-title{font-family:var(--ff-h);font-weight:700;font-size:1.05rem;line-height:1.2}
+.brand-sub{font-size:.8rem;color:var(--c-faint)}
+.theme-btn{display:inline-flex;align-items:center;gap:.45rem;padding:.5rem .85rem;border:1px solid var(--c-brd);border-radius:999px;background:var(--c-surf);font-size:.82rem;font-weight:600;color:var(--c-muted);box-shadow:var(--sh-sm);transition:background .15s,color .15s}
+.theme-btn:hover{background:var(--c-raised);color:var(--c-txt)}
+
+/* ── Hero ────────────────────────────────────────────────── */
+.hero{background:var(--c-surf);border:1px solid var(--c-brd);border-radius:var(--r-2xl);padding:clamp(1.25rem,3vw,2rem);margin-bottom:clamp(1rem,2vw,1.5rem);box-shadow:var(--sh-md);position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;top:-40px;right:-60px;width:280px;height:280px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--c-pri) 12%,transparent),transparent 70%);pointer-events:none}
+.hero-inner{position:relative}
+.badge{display:inline-flex;align-items:center;gap:.3rem;background:var(--c-pri-mid);color:var(--c-pri-dk);border:1px solid color-mix(in srgb,var(--c-pri) 25%,transparent);padding:.25rem .65rem;border-radius:999px;font-size:.78rem;font-weight:700;font-family:var(--ff-h);letter-spacing:.04em;margin-bottom:.85rem}
+.hero h1{font-family:var(--ff-h);font-size:clamp(1.35rem,1rem+1.5vw,2rem);font-weight:800;line-height:1.1;max-width:18ch;margin-bottom:.65rem}
+.hero p{color:var(--c-muted);max-width:74ch;font-size:clamp(.875rem,.82rem+.25vw,1rem)}
+.hero-grid{display:grid;grid-template-columns:1.5fr 1fr;gap:1.25rem;margin-top:1.5rem}
+.guide-card,.stats-card{background:var(--c-raised);border:1px solid var(--c-brd);border-radius:var(--r-xl);padding:1.1rem 1.25rem}
+.guide-card h2,.stats-card h2{font-family:var(--ff-h);font-size:.85rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--c-faint);margin-bottom:.75rem}
+.guide-card ol{padding-left:1.1rem;display:grid;gap:.45rem;color:var(--c-muted);font-size:.875rem}
+.guide-card code{font-family:var(--ff-m);font-size:.78em;background:var(--c-surf);border:1px solid var(--c-brd);padding:.1rem .35rem;border-radius:5px}
+.stats-card{display:grid;gap:.75rem}
+.stat-item{background:var(--c-surf);border:1px solid var(--c-brd);border-radius:var(--r-lg);padding:.7rem .9rem}
+.stat-item small{display:block;font-size:.75rem;color:var(--c-faint);margin-bottom:.15rem}
+.stat-item strong{font-family:var(--ff-m);font-size:.9rem;color:var(--c-pri-dk)}
+
+/* ── Main grid ───────────────────────────────────────────── */
+.main-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:clamp(.75rem,2vw,1.25rem);align-items:start}
+
+/* ── Card ────────────────────────────────────────────────── */
+.card{background:var(--c-surf);border:1px solid var(--c-brd);border-radius:var(--r-2xl);box-shadow:var(--sh-sm)}
+.card-body{padding:clamp(1rem,2.5vw,1.5rem)}
+.card-title{font-family:var(--ff-h);font-size:clamp(1rem,.9rem+.45vw,1.3rem);font-weight:700;margin-bottom:.4rem}
+.card-subtitle{font-size:.85rem;color:var(--c-muted);margin-bottom:1.25rem}
+.section-label{font-family:var(--ff-h);font-size:.75rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--c-faint);margin-bottom:.8rem}
+
+/* ── Fields ──────────────────────────────────────────────── */
+.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.85rem}
+.field{display:grid;gap:.35rem}
+.field.full{grid-column:1/-1}
+label{font-size:.82rem;font-weight:600;color:var(--c-muted);letter-spacing:.01em}
+label .req{color:var(--c-acc);margin-left:.15rem}
+input[type="text"],input[type="number"],input:not([type]){width:100%;padding:.7rem .9rem;border-radius:var(--r-lg);border:1.5px solid var(--c-brd);background:var(--c-surf2);font-family:var(--ff-m);font-size:.9rem;transition:border-color .15s,box-shadow .15s;-webkit-appearance:none;appearance:none}
+input:not([readonly]):focus{border-color:var(--c-pri);box-shadow:0 0 0 3px color-mix(in srgb,var(--c-pri) 15%,transparent);outline:none}
+input[readonly]{background:var(--c-raised);color:var(--c-muted);cursor:default;font-style:italic}
+input.lbl{font-family:var(--ff-b);font-size:.875rem}
+.hint{font-size:.75rem;color:var(--c-faint);line-height:1.4}
+
+/* ── Fieldset ────────────────────────────────────────────── */
+.fieldset{border:1.5px solid var(--c-brd);border-radius:var(--r-xl);padding:1rem 1.1rem;margin-top:1.1rem;background:color-mix(in srgb,var(--c-raised) 60%,transparent)}
+.fieldset legend{font-family:var(--ff-h);font-size:.8rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--c-muted);padding:0 .4rem}
+.fieldset-print legend{color:color-mix(in srgb,var(--c-pri) 80%,var(--c-muted));border-color:color-mix(in srgb,var(--c-pri) 30%,var(--c-brd))}
+
+/* ── Dynamic voce list ───────────────────────────────────── */
+.voce-list{display:grid;gap:.5rem;margin-bottom:.5rem}
+.voce-row{display:grid;grid-template-columns:1fr auto auto;gap:.6rem;align-items:end}
+.voce-row-inputs{display:grid;grid-template-columns:1.4fr 1fr;gap:.6rem;grid-column:1}
+.voce-importo-wrap{display:grid;gap:.35rem}
+.voce-remove{width:34px;height:34px;border-radius:var(--r-md);border:1.5px solid var(--c-brd);background:var(--c-raised);color:var(--c-muted);display:grid;place-items:center;flex-shrink:0;transition:background .15s,color .15s,border-color .15s;align-self:end}
+.voce-remove svg{width:13px;height:13px;pointer-events:none}
+.voce-remove:hover{background:var(--c-err-bg);color:var(--c-err);border-color:var(--c-err)}
+.add-voce-btn{display:inline-flex;align-items:center;gap:.4rem;padding:.5rem .8rem;border-radius:var(--r-md);border:1.5px dashed var(--c-brd);background:transparent;color:var(--c-muted);font-size:.8rem;font-weight:600;font-family:var(--ff-h);cursor:pointer;transition:border-color .15s,color .15s,background .15s}
+.add-voce-btn:hover{border-color:var(--c-pri);color:var(--c-pri-dk);background:var(--c-pri-lt)}
+.add-voce-btn svg{width:13px;height:13px}
+.voce-section{margin-top:1.1rem}
+.voce-section-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:.65rem}
+.voce-section-header .section-label{margin-bottom:0}
+.voce-subtotal{font-family:var(--ff-m);font-size:.78rem;color:var(--c-pri-dk);font-weight:600}
+
+/* ── Actions ─────────────────────────────────────────────── */
+.actions{display:flex;flex-wrap:wrap;gap:.6rem;margin-top:1.25rem;padding-top:1.1rem;border-top:1px solid var(--c-div)}
+.btn{display:inline-flex;align-items:center;gap:.45rem;padding:.72rem 1.2rem;border-radius:var(--r-lg);font-family:var(--ff-h);font-weight:700;font-size:.875rem;border:1.5px solid var(--c-brd);background:var(--c-surf);color:var(--c-muted);min-height:44px;transition:background .15s,border-color .15s,color .15s,transform .1s;cursor:pointer}
+.btn:hover{background:var(--c-raised);color:var(--c-txt)}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--c-pri);color:var(--c-inv);border-color:var(--c-pri);box-shadow:var(--sh-sm)}
+.btn.primary:hover{background:var(--c-pri-dk);border-color:var(--c-pri-dk)}
+.btn svg{width:15px;height:15px;flex-shrink:0}
+
+/* ── Results ─────────────────────────────────────────────── */
+.results-header{padding:1.25rem 1.25rem .75rem;border-bottom:1px solid var(--c-div)}
+.result-body{padding:1rem 1.25rem 1.25rem}
+.kpi-main{background:linear-gradient(135deg,var(--c-pri) 0%,var(--c-pri-dk) 100%);border-radius:var(--r-xl);padding:1.1rem 1.25rem;margin-bottom:1rem;position:relative;overflow:hidden}
+.kpi-main::after{content:'';position:absolute;bottom:-20px;right:-20px;width:100px;height:100px;border-radius:50%;background:rgba(255,255,255,.06)}
+.kpi-main .kpi-lbl{font-size:.78rem;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:rgba(255,255,255,.7);margin-bottom:.35rem}
+.kpi-main .kpi-val{font-family:var(--ff-m);font-size:clamp(1.6rem,1.2rem+1.5vw,2.2rem);font-weight:600;color:#fff;line-height:1}
+.kpi-main .kpi-sub{margin-top:.4rem;font-size:.78rem;color:rgba(255,255,255,.55)}
+.kpi-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:.65rem;margin-bottom:1rem}
+.kpi-cell{background:var(--c-raised);border:1px solid var(--c-brd);border-radius:var(--r-lg);padding:.8rem .9rem}
+.kpi-cell.full{grid-column:1/-1}
+.kpi-cell .kpi-lbl{font-size:.72rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--c-faint);margin-bottom:.3rem}
+.kpi-cell .kpi-val{font-family:var(--ff-m);font-size:1.05rem;font-weight:600;color:var(--c-txt)}
+.kpi-cell.kpi-sc .kpi-val{color:var(--c-pri-dk)}
+
+/* ── Quota bar ───────────────────────────────────────────── */
+.quota-bar-wrap{margin-bottom:.85rem;background:var(--c-raised);border:1px solid var(--c-brd);border-radius:var(--r-lg);padding:.85rem 1rem}
+.quota-bar-lbl{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--c-faint);margin-bottom:.6rem}
+.bar-track{width:100%;height:10px;background:var(--c-div);border-radius:999px;overflow:hidden;display:flex;gap:2px}
+.bar-seg{height:100%;border-radius:999px;transition:width .4s cubic-bezier(.4,0,.2,1);min-width:0}
+.bar-seg.ord{background:var(--c-pri)}
+.bar-seg.acc{background:color-mix(in srgb,var(--c-pri) 55%,white)}
+.bar-seg.tre{background:var(--c-acc)}
+.bar-legend{display:flex;gap:.85rem;margin-top:.55rem;flex-wrap:wrap}
+.bar-legend-item{display:flex;align-items:center;gap:.3rem;font-size:.72rem;color:var(--c-muted)}
+.bar-legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+/* ── Alerts ──────────────────────────────────────────────── */
+.alert{border-radius:var(--r-lg);padding:.75rem 1rem;font-size:.835rem;line-height:1.45;display:none;align-items:flex-start;gap:.5rem;margin-bottom:.75rem}
+.alert.show{display:flex}
+.alert-icon{flex-shrink:0;margin-top:.05rem}
+.alert.info{background:var(--c-pri-lt);border:1px solid color-mix(in srgb,var(--c-pri) 25%,transparent);color:var(--c-pri-dk)}
+.alert.success{background:var(--c-ok-bg);border:1px solid color-mix(in srgb,var(--c-ok) 28%,transparent);color:var(--c-ok)}
+.alert.warn{background:var(--c-warn-bg);border:1px solid color-mix(in srgb,var(--c-warn) 28%,transparent);color:var(--c-warn)}
+.alert.error{background:var(--c-err-bg);border:1px solid color-mix(in srgb,var(--c-err) 28%,transparent);color:var(--c-err)}
+
+/* ── Accordion ───────────────────────────────────────────── */
+.detail-accordion{border:1px solid var(--c-brd);border-radius:var(--r-lg);overflow:hidden}
+.acc-trigger{width:100%;display:flex;justify-content:space-between;align-items:center;padding:.75rem 1rem;background:var(--c-raised);font-size:.8rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--c-muted);cursor:pointer;border:none;transition:background .15s}
+.acc-trigger:hover{background:var(--c-div)}
+.acc-chevron{width:16px;height:16px;transition:transform .2s;color:var(--c-faint)}
+.acc-trigger[aria-expanded="true"] .acc-chevron{transform:rotate(180deg)}
+.acc-body{display:none}
+.acc-body.open{display:block}
+.calc-row{display:flex;justify-content:space-between;align-items:baseline;gap:1rem;padding:.5rem 1rem;border-top:1px solid var(--c-div)}
+.calc-row:first-child{border-top:none}
+.calc-row span{font-size:.8rem;color:var(--c-muted)}
+.calc-row strong{font-family:var(--ff-m);font-size:.82rem;font-weight:600;white-space:nowrap}
+
+/* ── Table section ───────────────────────────────────────── */
+.table-section{margin-top:clamp(.75rem,2vw,1.25rem)}
+.table-card-header{padding:1.25rem 1.5rem;border-bottom:1px solid var(--c-div);display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap}
+.table-card-header h2{font-family:var(--ff-h);font-size:1.1rem;font-weight:700}
+.legal-notes{padding:1rem 1.5rem;border-bottom:1px solid var(--c-div);display:grid;gap:.55rem;font-size:.835rem;color:var(--c-muted)}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th,td{padding:.7rem .85rem;text-align:left;border-bottom:1px solid var(--c-div);font-size:.85rem;vertical-align:top}
+th{font-family:var(--ff-h);font-size:.75rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--c-faint);background:var(--c-raised)}
+td:nth-child(2){font-family:var(--ff-m);font-size:.82rem;white-space:nowrap}
+td:nth-child(3){color:var(--c-muted);font-size:.8rem}
+tr:last-child td{border-bottom:none}
+tr.row-total td{font-weight:700;background:color-mix(in srgb,var(--c-pri) 7%,var(--c-surf))}
+
+/* ── Empty state ─────────────────────────────────────────── */
+.empty-state{text-align:center;padding:2.5rem 1rem;color:var(--c-faint)}
+.empty-state svg{width:40px;height:40px;margin-bottom:.75rem;opacity:.35;display:block;margin-left:auto;margin-right:auto}
+.empty-state p{font-size:.85rem}
+
+/* ── Footer note ─────────────────────────────────────────── */
+.footer-note{font-size:.75rem;color:var(--c-faint);padding:.75rem 1.5rem 1rem;line-height:1.5}
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media(max-width:960px){.hero-grid,.main-grid{grid-template-columns:1fr}}
+@media(max-width:620px){.fields{grid-template-columns:1fr}.kpi-grid{grid-template-columns:1fr}.kpi-cell.full{grid-column:1}.voce-row{grid-template-columns:1fr auto}.voce-row-inputs{grid-template-columns:1fr}}
+
+/* ══════════════════════════════════════════════════════════
+   PRINT LAYOUT
+   ══════════════════════════════════════════════════════════ */
+#printLayout{display:none}
+
+@media print {
+  @page{size:A4 portrait;margin:18mm 20mm}
+  body>*{display:none!important}
+  #printLayout{display:block!important}
+  .print-page-break{page-break-before:always;break-before:page}
+
+  /* Typography */
+  #printLayout{font-family:'DM Sans',sans-serif;font-size:10pt;color:#111;line-height:1.4}
+
+  /* Header comune */
+  .p-header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:8pt;border-bottom:2pt solid #006b6f;margin-bottom:14pt}
+  .p-header-left{}
+  .p-comune{font-family:'Outfit',sans-serif;font-size:15pt;font-weight:800;color:#006b6f;line-height:1.1;margin-bottom:2pt}
+  .p-settore{font-size:8pt;color:#666;text-transform:uppercase;letter-spacing:.06em}
+  .p-header-right{text-align:right;font-size:8pt;color:#888}
+  .p-doc-title{font-family:'Outfit',sans-serif;font-size:12pt;font-weight:700;color:#004d51;text-align:center;margin-bottom:10pt;text-transform:uppercase;letter-spacing:.08em}
+  .p-rif{font-size:7.5pt;color:#888;text-align:center;margin-bottom:14pt}
+
+  /* Dipendente box */
+  .p-dip{border:1pt solid #ccc;border-radius:4pt;padding:8pt 10pt;margin-bottom:12pt;display:grid;grid-template-columns:1fr 1fr;gap:4pt 16pt;background:#f9f9f9}
+  .p-dip-row{display:flex;flex-direction:column;gap:1pt}
+  .p-dip-row.full{grid-column:1/-1}
+  .p-dip-key{font-size:7pt;text-transform:uppercase;letter-spacing:.06em;color:#888}
+  .p-dip-val{font-size:10pt;font-weight:600}
+
+  /* Result box */
+  .p-result-main{border:2pt solid #006b6f;border-radius:6pt;padding:12pt;text-align:center;margin-bottom:10pt}
+  .p-result-main .p-lbl{font-size:8pt;text-transform:uppercase;letter-spacing:.08em;color:#006b6f;margin-bottom:4pt}
+  .p-result-main .p-amount{font-family:'JetBrains Mono',monospace;font-size:26pt;font-weight:700;color:#006b6f;line-height:1}
+
+  /* Quota breakdown grid */
+  .p-quota-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8pt;margin-bottom:10pt}
+  .p-quota-cell{border:1pt solid #ccc;border-radius:4pt;padding:6pt 8pt}
+  .p-quota-cell .p-lbl{font-size:7pt;text-transform:uppercase;letter-spacing:.06em;color:#666;margin-bottom:3pt}
+  .p-quota-cell .p-amount{font-family:'JetBrains Mono',monospace;font-size:12pt;font-weight:600;color:#111}
+
+  /* Info row */
+  .p-info-row{display:flex;gap:12pt;margin-bottom:10pt}
+  .p-info-cell{flex:1;border:1pt solid #ccc;border-radius:4pt;padding:6pt 8pt}
+  .p-info-cell .p-lbl{font-size:7pt;text-transform:uppercase;letter-spacing:.06em;color:#666;margin-bottom:2pt}
+  .p-info-cell .p-val{font-family:'JetBrains Mono',monospace;font-size:11pt;font-weight:600;color:#004d51}
+
+  /* Alert print */
+  .p-alert{border:1pt solid #888;border-radius:4pt;padding:6pt 8pt;font-size:8.5pt;margin-bottom:10pt;color:#444}
+  .p-alert.ok{border-color:#3a7a1a;background:#f2fae8;color:#2a5a12}
+  .p-alert.warn{border-color:#855e00;background:#fef9e7;color:#5a3f00}
+
+  /* Signature */
+  .p-signature{margin-top:20pt;display:grid;grid-template-columns:1fr 1fr;gap:20pt}
+  .p-sign-box{border-top:1pt solid #999;padding-top:4pt;font-size:8pt;color:#666}
+
+  /* Page 2 — detail table */
+  .p-header-sm{display:flex;justify-content:space-between;align-items:center;padding-bottom:6pt;border-bottom:1.5pt solid #006b6f;margin-bottom:10pt}
+  .p-header-sm .p-comune-sm{font-family:'Outfit',sans-serif;font-size:11pt;font-weight:700;color:#006b6f}
+  .p-header-sm .p-dip-sm{font-size:8.5pt;color:#444;text-align:right}
+  .p-section-title{font-family:'Outfit',sans-serif;font-size:10pt;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#004d51;margin-bottom:8pt}
+  .p-table{width:100%;border-collapse:collapse;font-size:8.5pt}
+  .p-table th{background:#e8f5f5;color:#004d51;font-size:7.5pt;text-transform:uppercase;letter-spacing:.05em;padding:5pt 6pt;text-align:left;border-bottom:1.5pt solid #006b6f}
+  .p-table td{padding:4.5pt 6pt;border-bottom:.5pt solid #ddd;vertical-align:top}
+  .p-table td:nth-child(2){font-family:'JetBrains Mono',monospace;white-space:nowrap}
+  .p-table td:nth-child(3){color:#666;font-size:7.5pt}
+  .p-table tr.total td{font-weight:700;background:#e8f5f5;border-top:1.5pt solid #006b6f}
+  .p-footnote{font-size:7pt;color:#888;margin-top:8pt;border-top:.5pt solid #ccc;padding-top:5pt}
+}
+</style>
+</head>
+<body>
+<!-- ══════════════════════════════════════════════════════════
+     SCREEN LAYOUT
+     ══════════════════════════════════════════════════════════ -->
+<div class="shell" id="shellMain">
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="3"/>
+          <path d="M9 9h6M9 12h4M9 15h5"/>
+          <circle cx="17" cy="15" r="3" fill="currentColor" stroke="none" opacity=".4"/>
+        </svg>
+      </div>
+      <div>
+        <div class="brand-title">Calcolatore Pignoramento PA</div>
+        <div class="brand-sub">DPR 180/1950 · Funzioni Locali</div>
+      </div>
+    </div>
+    <button class="theme-btn" id="themeBtn">
+      <svg id="themeIcon" viewBox="0 0 20 20" fill="currentColor" width="15" height="15"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"/></svg>
+      <span id="themeLbl">Scuro</span>
+    </button>
+  </header>
+
+  <main>
+    <!-- Hero -->
+    <section class="hero">
+      <div class="hero-inner">
+        <span class="badge">Micro tool operativo</span>
+        <h1>Quota da pignorare in busta paga PA</h1>
+        <p>Inserisci i <strong>netti dei cedolini</strong> (ordinario e straordinari), eventuali salario accessorio, tredicesima, cessioni e pignoramenti in corso. Il <strong>netto totale</strong> — somma di tutte le voci nette e delle cessioni — costituisce la base unica per lo scaglione e per il calcolo della capienza al 50 %.</p>
+        <div class="hero-grid">
+          <article class="guide-card">
+            <h2>Come usarlo</h2>
+            <ol>
+              <li>Aggiungi con <strong>+</strong> le <strong>voci di salario netto</strong>: il primo slot è il cedolino ordinario, i successivi per cedolini straordinari (es. arretrati, una tantum).</li>
+              <li>Aggiungi con <strong>+</strong> eventuali voci di <strong>salario accessorio netto</strong> e <strong>tredicesima netta</strong>.</li>
+              <li>Inserisci le <strong>cessioni volontarie</strong> in corso.</li>
+              <li>Inserisci i <strong>pignoramenti concorrenti</strong>; quello alimentare è evidenziato separatamente.</li>
+              <li>Usa <code>Stampa / PDF</code> per il prospetto da allegare alla cartella del dipendente.</li>
+            </ol>
+          </article>
+          <aside class="stats-card">
+            <h2>Parametri</h2>
+            <div class="stat-item"><small>Netto totale (base scaglione e capienza)</small><strong>Σ salari netti + cessioni</strong></div>
+            <div class="stat-item"><small>Scaglioni ordinari</small><strong>1/10 · 1/7 · 1/5</strong></div>
+            <div class="stat-item"><small>Accessorio e tredicesima</small><strong>Sempre 1/10</strong></div>
+            <div class="stat-item"><small>Limite capienza</small><strong>50 % netto totale</strong></div>
+          </aside>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main grid -->
+    <div class="main-grid">
+      <!-- Form -->
+      <article class="card">
+        <div class="card-body">
+          <p class="card-title">Dati di input</p>
+          <p class="card-subtitle">Importi in euro — separatore decimale: virgola o punto</p>
+
+          <!-- Dati dipendente per stampa -->
+          <fieldset class="fieldset fieldset-print">
+            <legend>
+              <svg style="width:11px;height:11px;display:inline;vertical-align:-.1em;margin-right:.3rem" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h10a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z"/><path d="M5 9h10M9 13h2"/></svg>
+              Intestazione prospetto (stampa)
+            </legend>
+            <div class="fields" style="margin-top:.65rem">
+              <div class="field full"><label for="pComune">Comune / Ente</label><input id="pComune" class="lbl" placeholder="Es. Comune di Reggio Calabria" autocomplete="off"></div>
+              <div class="field"><label for="pNome">Nome</label><input id="pNome" class="lbl" placeholder="Mario" autocomplete="off"></div>
+              <div class="field"><label for="pCognome">Cognome</label><input id="pCognome" class="lbl" placeholder="Rossi" autocomplete="off"></div>
+              <div class="field"><label for="pCF">Codice Fiscale</label><input id="pCF" class="lbl" placeholder="RSSMRA80A01F158X" autocomplete="off"></div>
+              <div class="field"><label for="pMatricola">Matricola</label><input id="pMatricola" class="lbl" placeholder="12345" autocomplete="off"></div>
+            </div>
+          </fieldset>
+
+          <!-- Voci salario netto (base) -->
+          <div class="voce-section" style="margin-top:1.25rem">
+            <div class="voce-section-header">
+              <span class="section-label">Voci di salario netto <span style="font-weight:400;letter-spacing:0;text-transform:none;font-size:.7rem">(cedolino ord. + straordinari)</span></span>
+              <span class="voce-subtotal" id="subBase">€ 0,00</span>
+            </div>
+            <div class="voce-list" id="listBase"></div>
+            <button class="add-voce-btn" id="addBase" type="button">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M10 4v12M4 10h12"/></svg>
+              Aggiungi voce
+            </button>
+          </div>
+
+          <!-- Voci salario accessorio -->
+          <div class="voce-section">
+            <div class="voce-section-header">
+              <span class="section-label">Salario accessorio netto <span style="font-weight:400;letter-spacing:0;text-transform:none;font-size:.7rem">(1/10)</span></span>
+              <span class="voce-subtotal" id="subAcc">€ 0,00</span>
+            </div>
+            <div class="voce-list" id="listAcc"></div>
+            <button class="add-voce-btn" id="addAcc" type="button">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M10 4v12M4 10h12"/></svg>
+              Aggiungi voce
+            </button>
+          </div>
+
+          <!-- Voci tredicesima -->
+          <div class="voce-section">
+            <div class="voce-section-header">
+              <span class="section-label">Tredicesima netta <span style="font-weight:400;letter-spacing:0;text-transform:none;font-size:.7rem">(1/10)</span></span>
+              <span class="voce-subtotal" id="subTre">€ 0,00</span>
+            </div>
+            <div class="voce-list" id="listTre"></div>
+            <button class="add-voce-btn" id="addTre" type="button">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M10 4v12M4 10h12"/></svg>
+              Aggiungi voce
+            </button>
+          </div>
+
+          <!-- Cessioni volontarie -->
+          <fieldset class="fieldset">
+            <legend>Cessioni volontarie</legend>
+            <div class="voce-list" id="listCess" style="margin-top:.65rem"></div>
+            <button class="add-voce-btn" id="addCess" type="button" style="margin-top:.5rem">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M10 4v12M4 10h12"/></svg>
+              Aggiungi cessione
+            </button>
+          </fieldset>
+
+          <!-- Pignoramenti in corso -->
+          <fieldset class="fieldset">
+            <legend>Pignoramenti in corso</legend>
+            <div class="fields" style="margin-top:.65rem">
+              <div class="field"><label for="pignEsatt">Esattoriale</label><input id="pignEsatt" inputmode="decimal" placeholder="0,00" autocomplete="off"></div>
+              <div class="field"><label for="pignOrd">Ordinario</label><input id="pignOrd" inputmode="decimal" placeholder="0,00" autocomplete="off"></div>
+              <div class="field full">
+                <label for="pignAlim">Alimentare</label>
+                <input id="pignAlim" inputmode="decimal" placeholder="0,00" autocomplete="off">
+                <span class="hint">Evidenziato separatamente · non incide sul netto di calcolo</span>
+              </div>
+            </div>
+          </fieldset>
+
+          <div class="actions">
+            <button class="btn primary" id="calcolaBtn">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="14" height="14" rx="2"/><path d="M7 10h6M10 7v6"/></svg>
+              Calcola
+            </button>
+            <button class="btn" id="resetBtn" type="button">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10a7 7 0 107-7"/><path d="M3 4v6h6"/></svg>
+              Reset
+            </button>
+            <div style="flex:1 1 0"></div>
+            <button class="btn" id="pdfBtn" type="button">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h8l4 4v8a1 1 0 01-1 1H5a1 1 0 01-1-1V5a1 1 0 011-1z"/><path d="M12 4v4h4M7 13h6M7 10h2"/></svg>
+              Stampa / PDF
+            </button>
+            <button class="btn" id="excelBtn" type="button">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="14" height="14" rx="2"/><path d="M7 8l3 4 3-4M7 12h6"/></svg>
+              Excel
+            </button>
+          </div>
+        </div>
+      </article>
+
+      <!-- Results -->
+      <aside class="card">
+        <div class="results-header">
+          <p class="card-title">Risultato operativo</p>
+        </div>
+        <div class="result-body">
+          <div id="alertErrori"></div>
+          <div class="empty-state" id="emptyState">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+            <p>Inserisci i dati e premi <strong>Calcola</strong> per ottenere il prospetto.</p>
+          </div>
+          <div id="resultContent" style="display:none">
+            <div class="kpi-main">
+              <div class="kpi-lbl">Quota complessiva da trattenere</div>
+              <div class="kpi-val" id="quotaTotale">€ 0,00</div>
+              <div class="kpi-sub" id="quotaSub">–</div>
+            </div>
+            <div class="alert" id="alertCapienza"></div>
+            <div class="quota-bar-wrap">
+              <div class="quota-bar-lbl">Composizione quota</div>
+              <div class="bar-track">
+                <div class="bar-seg ord" id="barOrd" style="width:0%"></div>
+                <div class="bar-seg acc" id="barAcc" style="width:0%"></div>
+                <div class="bar-seg tre" id="barTre" style="width:0%"></div>
+              </div>
+              <div class="bar-legend">
+                <div class="bar-legend-item"><div class="bar-legend-dot" style="background:var(--c-pri)"></div>Ordinaria <strong id="blgOrd" style="font-family:var(--ff-m);margin-left:.25rem"></strong></div>
+                <div class="bar-legend-item"><div class="bar-legend-dot" style="background:color-mix(in srgb,var(--c-pri) 55%,white)"></div>Accessorio <strong id="blgAcc" style="font-family:var(--ff-m);margin-left:.25rem"></strong></div>
+                <div class="bar-legend-item"><div class="bar-legend-dot" style="background:var(--c-acc)"></div>Tredicesima <strong id="blgTre" style="font-family:var(--ff-m);margin-left:.25rem"></strong></div>
+              </div>
+            </div>
+            <div class="kpi-grid">
+              <div class="kpi-cell kpi-sc"><div class="kpi-lbl">Scaglione</div><div class="kpi-val" id="scaglione">–</div></div>
+              <div class="kpi-cell"><div class="kpi-lbl">Residuo pignorabile</div><div class="kpi-val" id="residuoKpi">€ 0,00</div></div>
+              <div class="kpi-cell full"><div class="kpi-lbl">Netto totale (base scaglione e capienza)</div><div class="kpi-val" id="nettoPignKpi">€ 0,00</div></div>
+            </div>
+            <div class="detail-accordion">
+              <button class="acc-trigger" id="accTrigger" aria-expanded="false" aria-controls="accBody">
+                <span>Dettaglio calcolo</span>
+                <svg class="acc-chevron" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8l5 5 5-5"/></svg>
+              </button>
+              <div class="acc-body" id="accBody" role="region">
+                <div id="dettaglioCalcolo"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="footer-note">Netto totale = Σ salari netti + cessioni — base unica per scaglione e capienza al 50 %. Accessorio e tredicesima al 1/10; tutte le quote proporzionate alla capienza residua.</p>
+      </aside>
+    </div>
+
+    <!-- Table section -->
+    <section class="card table-section">
+      <div class="table-card-header">
+        <h2>Prospetto di calcolo</h2>
+        <div style="font-size:.8rem;color:var(--c-faint)">Generato dopo il calcolo</div>
+      </div>
+      <div class="legal-notes">
+        <p>Il <strong>netto totale</strong> — somma delle voci di salario netto (cedolini ordinari, straordinari, accessorio, tredicesima) più le cessioni volontarie — costituisce la base sia per la determinazione dello scaglione (1/10, 1/7, 1/5) sia per il calcolo del limite massimo pignorabile al 50 %. I pignoramenti concorrenti incidono solo sugli impegni già in essere, riducendo la capienza disponibile.</p>
+        <p>Salario accessorio e tredicesima sono assoggettati autonomamente al 1/10. Il pignoramento alimentare è mantenuto separato in linea con DPR 180/1950 e non entra nel calcolo del netto totale.</p>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Voce</th><th>Valore</th><th>Note</th></tr></thead>
+          <tbody id="reportBody">
+            <tr><td colspan="3"><div class="empty-state" style="padding:1.5rem"><p>Il prospetto sarà generato dopo il calcolo.</p></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="footer-note">Rif. normativi: DPR 180/1950 art. 52 · Circ. INPS n. 235/2016 · Cass. Civ. n. 7337/2018</p>
+    </section>
+  </main>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     PRINT LAYOUT (hidden on screen, shown only when printing)
+     ══════════════════════════════════════════════════════════ -->
+<div id="printLayout">
+  <!-- PAGE 1 — Risultato operativo -->
+  <div id="printPage1">
+    <div class="p-header">
+      <div class="p-header-left">
+        <div class="p-comune" id="pp-comune">—</div>
+        <div class="p-settore">Settore Gestione Risorse Umane</div>
+      </div>
+      <div class="p-header-right">
+        <div id="pp-data"></div>
+        <div>Calcolatore Pignoramento PA v4</div>
+      </div>
+    </div>
+    <div class="p-doc-title">Prospetto di Calcolo Trattenuta Stipendiale per Pignoramento</div>
+    <div class="p-rif">Ai sensi del DPR 180/1950, art. 52 · Circ. INPS n. 235/2016 · Cass. Civ. n. 7337/2018</div>
+    <div class="p-dip" id="pp-dip">
+      <div class="p-dip-row full"><span class="p-dip-key">Ente / Comune</span><span class="p-dip-val" id="pp-dip-comune">—</span></div>
+      <div class="p-dip-row"><span class="p-dip-key">Nome e Cognome</span><span class="p-dip-val" id="pp-dip-nome">—</span></div>
+      <div class="p-dip-row"><span class="p-dip-key">Codice Fiscale</span><span class="p-dip-val" id="pp-dip-cf">—</span></div>
+      <div class="p-dip-row"><span class="p-dip-key">Matricola</span><span class="p-dip-val" id="pp-dip-matr">—</span></div>
+    </div>
+    <div class="p-result-main">
+      <div class="p-lbl">Quota complessiva da trattenere in busta paga</div>
+      <div class="p-amount" id="pp-totale">€ 0,00</div>
+    </div>
+    <div class="p-quota-grid">
+      <div class="p-quota-cell"><div class="p-lbl">Quota ordinaria</div><div class="p-amount" id="pp-ord">€ 0,00</div></div>
+      <div class="p-quota-cell"><div class="p-lbl">Quota accessorio</div><div class="p-amount" id="pp-acc">€ 0,00</div></div>
+      <div class="p-quota-cell"><div class="p-lbl">Quota tredicesima</div><div class="p-amount" id="pp-tre">€ 0,00</div></div>
+    </div>
+    <div class="p-info-row">
+      <div class="p-info-cell"><div class="p-lbl">Scaglione applicato</div><div class="p-val" id="pp-scagl">—</div></div>
+      <div class="p-info-cell"><div class="p-lbl">Netto totale (base scaglione)</div><div class="p-val" id="pp-netto-ricostr">€ 0,00</div></div>
+      <div class="p-info-cell"><div class="p-lbl">Residuo pignorabile</div><div class="p-val" id="pp-residuo">€ 0,00</div></div>
+    </div>
+    <div class="p-alert" id="pp-alert"></div>
+    <div class="p-signature">
+      <div class="p-sign-box">Responsabile del procedimento<br><br></div>
+      <div class="p-sign-box">Il Dirigente / Responsabile d'area<br><br></div>
+    </div>
+  </div>
+
+  <!-- PAGE 2 — Dettaglio calcolo -->
+  <div id="printPage2" class="print-page-break">
+    <div class="p-header-sm">
+      <div class="p-comune-sm" id="pp2-comune">—</div>
+      <div class="p-dip-sm" id="pp2-dip">—</div>
+    </div>
+    <div class="p-section-title">Dettaglio analitico del calcolo</div>
+    <table class="p-table" id="pp-table">
+      <thead><tr><th>Voce</th><th>Valore</th><th>Note operative</th></tr></thead>
+      <tbody id="pp-tbody"></tbody>
+    </table>
+    <div class="p-footnote">
+      Prospetto generato da Calcolatore Pignoramento PA (Immedia S.p.A. — PayrollItalia Pro) · DPR 180/1950 art. 52 · Il netto totale (Σ salari netti + cessioni) è la base unica per scaglione e capienza al 50 %. I pignoramenti concorrenti incidono sugli impegni già in essere ma non sulla determinazione dello scaglione. Il pignoramento alimentare non rientra nel netto di calcolo.
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+/* ── Utils ──────────────────────────────────────────────── */
+const $ = id => document.getElementById(id);
+const euro = n => new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR'}).format(isFinite(n)?n:0);
+const pct  = n => new Intl.NumberFormat('it-IT',{style:'percent',maximumFractionDigits:4}).format(n);
+const num  = v => {
+  if(typeof v==='number') return v;
+  const s=String(v??'').trim().replace(/\s/g,'').replace(/\./g,'').replace(',','.').replace(/[^0-9.\-]/g,'');
+  const n=parseFloat(s);
+  return isFinite(n)?n:0;
+};
+const round2 = n => Math.round((n+Number.EPSILON)*100)/100;
+const min0   = n => Math.max(0,round2(n));
+
+/* ── State ──────────────────────────────────────────────── */
+let isDirty = false;
+let currentResult = null;
+
+/* ── Theme ──────────────────────────────────────────────── */
+let theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+const applyTheme = () => {
+  document.documentElement.setAttribute('data-theme', theme);
+  $('themeIcon').innerHTML = theme==='dark'
+    ? '<circle cx="10" cy="10" r="4"/><path d="M10 2v2M10 16v2M2 10h2M16 10h2M4.93 4.93l1.41 1.41M13.66 13.66l1.41 1.41M4.93 15.07l1.41-1.41M13.66 6.34l1.41-1.41"/>'
+    : '<path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"/>';
+  $('themeLbl').textContent = theme==='dark'?'Chiaro':'Scuro';
+};
+applyTheme();
+$('themeBtn').addEventListener('click', () => { theme=theme==='dark'?'light':'dark'; applyTheme(); });
+
+/* ── Accordion ──────────────────────────────────────────── */
+$('accTrigger').addEventListener('click', function(){
+  const open = this.getAttribute('aria-expanded')==='true';
+  this.setAttribute('aria-expanded', String(!open));
+  $('accBody').classList.toggle('open', !open);
+});
+
+/* ═══════════════════════════════════════════════════════
+   DYNAMIC VOCE LISTS
+   ═══════════════════════════════════════════════════════ */
+const LISTS = {
+  base: { container: 'listBase', sub: 'subBase', defaultLabel: () => { const n=$('listBase').children.length; return n===0?'Cedolino ordinario':'Cedolino straordinario'; } },
+  acc:  { container: 'listAcc',  sub: 'subAcc',  defaultLabel: () => 'Salario accessorio' },
+  tre:  { container: 'listTre',  sub: 'subTre',  defaultLabel: () => 'Tredicesima' },
+  cess: { container: 'listCess', sub: null,       defaultLabel: () => { const n=$('listCess').children.length; return `Cessione ${n+1}`; } }
+};
+
+let voceIds = 0;
+
+function createVoceRow(type, labelVal='', importoVal='') {
+  const id = `vr-${++voceIds}`;
+  const cfg = LISTS[type];
+  const placeholder = cfg.defaultLabel();
+
+  const row = document.createElement('div');
+  row.className = 'voce-row';
+  row.dataset.id = id;
+  row.innerHTML = `
+    <div class="voce-row-inputs">
+      <div class="field"><label style="font-size:.75rem">Descrizione</label><input class="voce-lbl lbl" placeholder="${placeholder}" value="${labelVal}" autocomplete="off"></div>
+      <div class="voce-importo-wrap"><label style="font-size:.75rem">Importo</label><input class="voce-imp" inputmode="decimal" placeholder="0,00" value="${importoVal}" autocomplete="off"></div>
+    </div>
+    <button class="voce-remove" type="button" aria-label="Rimuovi">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 5l10 10M15 5L5 15"/></svg>
+    </button>`;
+
+  row.querySelector('.voce-remove').addEventListener('click', () => {
+    row.remove();
+    updateSubtotal(type);
+    if(isDirty) calcola();
+  });
+  row.querySelector('.voce-imp').addEventListener('input', () => {
+    updateSubtotal(type);
+    if(isDirty) calcola();
+  });
+  row.querySelector('.voce-lbl').addEventListener('input', () => { if(isDirty) calcola(); });
+
+  return row;
+}
+
+function addVoce(type, labelVal='', importoVal='') {
+  $(LISTS[type].container).appendChild(createVoceRow(type, labelVal, importoVal));
+}
+
+function updateSubtotal(type) {
+  const subId = LISTS[type].sub;
+  if(!subId) return;
+  const rows = $(LISTS[type].container).querySelectorAll('.voce-imp');
+  const tot = Array.from(rows).reduce((a,inp) => a+num(inp.value), 0);
+  $(subId).textContent = euro(round2(tot));
+}
+
+function getVociList(type) {
+  const rows = $(LISTS[type].container).querySelectorAll('.voce-row');
+  return Array.from(rows).map(r => ({
+    label:  r.querySelector('.voce-lbl').value.trim() || LISTS[type].defaultLabel(),
+    importo: num(r.querySelector('.voce-imp').value)
+  }));
+}
+
+// Wire add buttons
+$('addBase').addEventListener('click', () => { addVoce('base'); updateSubtotal('base'); });
+$('addAcc').addEventListener('click',  () => { addVoce('acc');  updateSubtotal('acc'); });
+$('addTre').addEventListener('click',  () => { addVoce('tre');  updateSubtotal('tre'); });
+$('addCess').addEventListener('click', () => { addVoce('cess'); });
+
+// Default: one "Cedolino ordinario" slot on load
+addVoce('base');
+
+/* ═══════════════════════════════════════════════════════
+   CALCULATION
+   ═══════════════════════════════════════════════════════ */
+function calcola() {
+  isDirty = true;
+  const errori = [];
+
+  const vociBase       = getVociList('base');
+  const vociAcc        = getVociList('acc');
+  const vociTre        = getVociList('tre');
+  const vociCess       = getVociList('cess');
+  const pignEsattoriale = num($('pignEsatt').value);
+  const pignOrdinario   = num($('pignOrd').value);
+  const pignAlimentare  = num($('pignAlim').value);
+
+  const salarioBase       = round2(vociBase.reduce((a,v) => a+v.importo, 0));
+  const salarioAccessorio = round2(vociAcc.reduce((a,v) => a+v.importo, 0));
+  const tredicesima       = round2(vociTre.reduce((a,v) => a+v.importo, 0));
+  const totaleSalari      = round2(salarioBase + salarioAccessorio + tredicesima);
+  const totaleCessioni    = round2(vociCess.reduce((a,v) => a+v.importo, 0));
+
+  if(totaleSalari <= 0) errori.push('Inserisci almeno una voce di salario netto maggiore di zero.');
+  if([salarioBase,salarioAccessorio,tredicesima].some(v => v<0)) errori.push('Le voci retributive non possono essere negative.');
+
+  // NETTO TOTALE = Σ salari netti + cessioni
+  // Base unica per: scaglione, capienza al 50%
+  const nettoTotale = round2(totaleSalari + totaleCessioni);
+
+  const totalePignoramentiConc = round2(pignEsattoriale + pignOrdinario);
+
+  // Scaglione su nettoTotale
+  let aliquotaOrdinaria = 0.10, scaglione = '1/10';
+  if(nettoTotale > 2500 && nettoTotale <= 5000){ aliquotaOrdinaria = 1/7;  scaglione = '1/7'; }
+  if(nettoTotale > 5000)                        { aliquotaOrdinaria = 0.20; scaglione = '1/5'; }
+
+  // Quote teoriche
+  // Quota ordinaria: base = salario netto (tutti i cedolini) + cessioni volontarie
+  // Le cessioni rientrano nel totale per norma; per semplicità espositiva si aggregano sempre all'ordinario
+  const baseOrdinaria           = round2(salarioBase + totaleCessioni);
+  const quotaTeoricaOrdinaria   = round2(baseOrdinaria    * aliquotaOrdinaria);
+  // Accessorio e tredicesima: sempre autonome al 1/10 indipendentemente dallo scaglione
+  const quotaTeoricaAccessorio  = round2(salarioAccessorio * 0.10);
+  const quotaTeoricaTredicesima = round2(tredicesima        * 0.10);
+  const quotaTeoricaTotale      = round2(quotaTeoricaOrdinaria + quotaTeoricaAccessorio + quotaTeoricaTredicesima);
+
+  // Capienza: 50% su nettoTotale; impegni = cessioni + pignoramenti concorrenti
+  const limiteMeta         = round2(nettoTotale * 0.50);
+  const impegniSuCapienza  = round2(totaleCessioni + totalePignoramentiConc);
+  const residuoPignorabile = min0(limiteMeta - impegniSuCapienza);
+
+  // Quote effettive con riparto proporzionale
+  const quotaEffettivaTotale      = min0(Math.min(quotaTeoricaTotale, residuoPignorabile));
+  const riparto                   = quotaTeoricaTotale > 0 ? quotaEffettivaTotale / quotaTeoricaTotale : 0;
+  const quotaEffettivaOrdinaria   = min0(round2(quotaTeoricaOrdinaria   * riparto));
+  const quotaEffettivaAccessorio  = min0(round2(quotaTeoricaAccessorio  * riparto));
+  const quotaEffettivaTredicesima = min0(round2(quotaTeoricaTredicesima * riparto));
+
+  const capienzaInsuffic = quotaEffettivaTotale < quotaTeoricaTotale;
+  const alertCapMsg  = capienzaInsuffic
+    ? 'Capienza insufficiente: il sistema applica il minore tra quota teorica e residuo pignorabile.'
+    : 'Capienza sufficiente: la quota proposta coincide con la quota teorica calcolata.';
+  const alertCapType = capienzaInsuffic ? 'warn' : 'success';
+
+  currentResult = {
+    vociBase, vociAcc, vociTre, vociCess,
+    salarioBase, salarioAccessorio, tredicesima, totaleSalari,
+    totaleCessioni, totalePignoramentiConc,
+    pignEsattoriale, pignOrdinario, pignAlimentare,
+    nettoTotale, baseOrdinaria,
+    limiteMeta, impegniSuCapienza, residuoPignorabile,
+    aliquotaOrdinaria, scaglione,
+    quotaTeoricaOrdinaria, quotaTeoricaAccessorio, quotaTeoricaTredicesima, quotaTeoricaTotale,
+    quotaEffettivaOrdinaria, quotaEffettivaAccessorio, quotaEffettivaTredicesima, quotaEffettivaTotale,
+    riparto, alertCapMsg, alertCapType, errori
+  };
+
+  render();
+}
+
+/* ── Render ─────────────────────────────────────────────── */
+function render() {
+  const r = currentResult;
+  $('alertErrori').innerHTML = '';
+
+  if(isDirty && r.errori.length) {
+    $('alertErrori').innerHTML = r.errori.map(e =>
+      `<div class="alert error show"><span class="alert-icon">⚠</span><span>${e}</span></div>`
+    ).join('');
+    $('emptyState').style.display = '';
+    $('resultContent').style.display = 'none';
+    return;
+  }
+
+  $('emptyState').style.display = 'none';
+  $('resultContent').style.display = '';
+
+  $('quotaTotale').textContent   = euro(r.quotaEffettivaTotale);
+  $('quotaSub').textContent      = `Scaglione ${r.scaglione} · netto totale ${euro(r.nettoTotale)}`;
+  $('scaglione').textContent     = r.scaglione;
+  $('residuoKpi').textContent    = euro(r.residuoPignorabile);
+  $('nettoPignKpi').textContent  = euro(r.nettoTotale);
+
+  const ac = $('alertCapienza');
+  if(!r.errori.length && r.nettoTotale > 0) {
+    ac.className = `alert ${r.alertCapType} show`;
+    ac.innerHTML = `<span class="alert-icon">${r.alertCapType==='warn'?'⚠':'✓'}</span><span>${r.alertCapMsg}</span>`;
+  } else { ac.className = 'alert'; }
+
+  const tot = r.quotaEffettivaTotale;
+  $('barOrd').style.width = tot>0 ? `${(r.quotaEffettivaOrdinaria/tot*100).toFixed(1)}%` : '0%';
+  $('barAcc').style.width = tot>0 ? `${(r.quotaEffettivaAccessorio/tot*100).toFixed(1)}%` : '0%';
+  $('barTre').style.width = tot>0 ? `${(r.quotaEffettivaTredicesima/tot*100).toFixed(1)}%` : '0%';
+  $('blgOrd').textContent = euro(r.quotaEffettivaOrdinaria);
+  $('blgAcc').textContent = euro(r.quotaEffettivaAccessorio);
+  $('blgTre').textContent = euro(r.quotaEffettivaTredicesima);
+
+  // Detail accordion
+  const righe = [
+    ['Σ Salari netti (base + accessorio + tredicesima)', euro(r.totaleSalari)],
+    ['Cessioni volontarie',                              euro(r.totaleCessioni)],
+    ['Netto totale (base scaglione e capienza)',         euro(r.nettoTotale)],
+    ['Pignoramenti concorrenti',                         euro(r.totalePignoramentiConc)],
+    ['Limite massimo pignorabile (50 %)',                euro(r.limiteMeta)],
+    ['Impegni già incidenti sul limite',                 euro(r.impegniSuCapienza)],
+    ['Residuo pignorabile',                              euro(r.residuoPignorabile)],
+    ['Quota teorica ordinaria',                          euro(r.quotaTeoricaOrdinaria)],
+    ['Quota teorica accessorio',                         euro(r.quotaTeoricaAccessorio)],
+    ['Quota teorica tredicesima',                        euro(r.quotaTeoricaTredicesima)],
+    ['Fattore di riparto capienza',                      `${(r.riparto*100).toFixed(4)} %`],
+  ];
+  $('dettaglioCalcolo').innerHTML = righe.map(([k,v]) =>
+    `<div class="calc-row"><span>${k}</span><strong>${v}</strong></div>`
+  ).join('');
+
+  // Report table
+  const noteCess = r.vociCess.filter(c=>c.importo>0).map(c=>`${c.label}: ${euro(c.importo)}`).join(' · ') || 'Nessuna cessione';
+  const noteBase = r.vociBase.filter(v=>v.importo>0).map(v=>`${v.label}: ${euro(v.importo)}`).join(' · ') || '—';
+  const noteAcc  = r.vociAcc.filter(v=>v.importo>0).map(v=>`${v.label}: ${euro(v.importo)}`).join(' · ') || '—';
+  const noteTre  = r.vociTre.filter(v=>v.importo>0).map(v=>`${v.label}: ${euro(v.importo)}`).join(' · ') || '—';
+
+  const rows = [
+    ['Salario netto ordinario (totale)',         euro(r.salarioBase),               noteBase],
+    ['Salario accessorio netto (totale)',         euro(r.salarioAccessorio),         noteAcc],
+    ['Tredicesima netta (totale)',                euro(r.tredicesima),               noteTre],
+    ['Cessioni volontarie',                       euro(r.totaleCessioni),            noteCess],
+    ['Pignoramento esattoriale',                  euro(r.pignEsattoriale),           'Impegno concorrente su capienza'],
+    ['Pignoramento ordinario',                    euro(r.pignOrdinario),             'Impegno concorrente su capienza'],
+    ['Pignoramento alimentare',                   euro(r.pignAlimentare),            'Segnalato separatamente — non incluso nel netto di calcolo'],
+    ['Netto totale (Σ salari + cessioni)',         euro(r.nettoTotale),               'Base unica per scaglione e capienza al 50 %'],
+    ['Pignoramenti concorrenti',                  euro(r.totalePignoramentiConc),    'Esattoriale + ordinario'],
+    ['Limite massimo pignorabile (50 %)',          euro(r.limiteMeta),                '50 % del netto totale'],
+    ['Impegni su capienza',                        euro(r.impegniSuCapienza),         'Cessioni + pig. concorrenti'],
+    ['Residuo pignorabile',                        euro(r.residuoPignorabile),        'Capienza residua disponibile'],
+    ['Scaglione applicato',                        r.scaglione,                       `Aliquota ${(r.aliquotaOrdinaria*100).toFixed(6).replace('.',',')} %`],
+    ['Base quota ordinaria',                       euro(r.baseOrdinaria),             `Salari netti + cessioni (${euro(r.salarioBase)} + ${euro(r.totaleCessioni)})`],
+    ['Quota teorica ordinaria',                    euro(r.quotaTeoricaOrdinaria),     `Ante capienza · scaglione × base ord. (${euro(r.baseOrdinaria)})`],
+    ['Quota teorica accessorio',                   euro(r.quotaTeoricaAccessorio),    `Ante capienza · 1/10 × accessorio netto (${euro(r.salarioAccessorio)})`],
+    ['Quota teorica tredicesima',                  euro(r.quotaTeoricaTredicesima),   `Ante capienza · 1/10 × tredicesima netta (${euro(r.tredicesima)})`],
+    ['Fattore di riparto',                         `${(r.riparto*100).toFixed(4)} %`, 'Proporzionale — rispetto capienza'],
+    ['Quota effettiva ordinaria',                  euro(r.quotaEffettivaOrdinaria),   'Post riparto capienza'],
+    ['Quota effettiva accessorio',                 euro(r.quotaEffettivaAccessorio),  'Post riparto capienza'],
+    ['Quota effettiva tredicesima',                euro(r.quotaEffettivaTredicesima), 'Post riparto capienza'],
+  ];
+  $('reportBody').innerHTML =
+    rows.map(([k,v,n]) => `<tr><td>${k}</td><td>${v}</td><td>${n}</td></tr>`).join('') +
+    `<tr class="row-total"><td><strong>Totale da trattenere</strong></td><td><strong>${euro(r.quotaEffettivaTotale)}</strong></td><td>${r.alertCapMsg}</td></tr>`;
+
+  populatePrint(r);
+}
+
+/* ── Populate print layout ──────────────────────────────── */
+function populatePrint(r) {
+  const comune   = $('pComune').value.trim() || 'Ente non specificato';
+  const nome     = $('pNome').value.trim();
+  const cognome  = $('pCognome').value.trim();
+  const cf       = $('pCF').value.trim();
+  const matricola= $('pMatricola').value.trim();
+  const nomeComp = [nome, cognome].filter(Boolean).join(' ') || '—';
+  const dateStr  = new Date().toLocaleDateString('it-IT',{day:'2-digit',month:'long',year:'numeric'});
+
+  // Page 1
+  $('pp-comune').textContent        = comune;
+  $('pp-data').textContent          = `Data: ${dateStr}`;
+  $('pp-dip-comune').textContent    = comune;
+  $('pp-dip-nome').textContent      = nomeComp;
+  $('pp-dip-cf').textContent        = cf || '—';
+  $('pp-dip-matr').textContent      = matricola || '—';
+  $('pp-totale').textContent        = euro(r.quotaEffettivaTotale);
+  $('pp-ord').textContent           = euro(r.quotaEffettivaOrdinaria);
+  $('pp-acc').textContent           = euro(r.quotaEffettivaAccessorio);
+  $('pp-tre').textContent           = euro(r.quotaEffettivaTredicesima);
+  $('pp-scagl').textContent         = r.scaglione;
+  $('pp-netto-ricostr').textContent = euro(r.nettoTotale);
+  $('pp-residuo').textContent       = euro(r.residuoPignorabile);
+
+  const ppa = $('pp-alert');
+  ppa.className = `p-alert ${r.alertCapType === 'warn' ? 'warn' : 'ok'}`;
+  ppa.textContent = r.alertCapMsg;
+
+  // Page 2
+  $('pp2-comune').textContent = comune;
+  $('pp2-dip').textContent    = `${nomeComp}${cf ? ' · ' + cf : ''}${matricola ? ' · Matr. ' + matricola : ''}`;
+
+  const noteBase = r.vociBase.filter(v=>v.importo>0).map(v=>`${v.label}: ${euro(v.importo)}`).join(' · ') || '—';
+  const noteAcc  = r.vociAcc.filter(v=>v.importo>0).map(v=>`${v.label}: ${euro(v.importo)}`).join(' · ') || '—';
+  const noteTre  = r.vociTre.filter(v=>v.importo>0).map(v=>`${v.label}: ${euro(v.importo)}`).join(' · ') || '—';
+  const noteCess = r.vociCess.filter(c=>c.importo>0).map(c=>`${c.label}: ${euro(c.importo)}`).join(' · ') || 'Nessuna';
+
+  const pRows = [
+    ['Salario netto ordinario',          euro(r.salarioBase),               noteBase],
+    ['Salario accessorio netto',         euro(r.salarioAccessorio),         noteAcc],
+    ['Tredicesima netta',                euro(r.tredicesima),               noteTre],
+    ['Cessioni volontarie',              euro(r.totaleCessioni),            noteCess],
+    ['Pignoramento esattoriale',         euro(r.pignEsattoriale),           'Concorrente'],
+    ['Pignoramento ordinario',           euro(r.pignOrdinario),             'Concorrente'],
+    ['Pignoramento alimentare',          euro(r.pignAlimentare),            'Separato · non incluso nel calcolo'],
+    ['Netto totale (Σ salari + cess.)',  euro(r.nettoTotale),               'Base scaglione e capienza al 50 %'],
+    ['Pignoramenti concorrenti',         euro(r.totalePignoramentiConc),    'Esattoriale + ordinario'],
+    ['Limite 50 %',                      euro(r.limiteMeta),                '50 % del netto totale'],
+    ['Impegni su capienza',              euro(r.impegniSuCapienza),         'Cessioni + pig. conc.'],
+    ['Residuo pignorabile',              euro(r.residuoPignorabile),        'Capienza disponibile'],
+    ['Scaglione applicato',              r.scaglione,                       `Aliquota ${(r.aliquotaOrdinaria*100).toFixed(6).replace('.',',')} %`],
+    ['Base quota ordinaria',             euro(r.baseOrdinaria),             `Salari netti + cessioni`],
+    ['Quota teorica ordinaria',          euro(r.quotaTeoricaOrdinaria),     'Ante capienza'],
+    ['Quota teorica accessorio',         euro(r.quotaTeoricaAccessorio),    'Ante capienza'],
+    ['Quota teorica tredicesima',        euro(r.quotaTeoricaTredicesima),   'Ante capienza'],
+    ['Fattore di riparto',               `${(r.riparto*100).toFixed(4)} %`,'Rispetto capienza'],
+    ['Quota effettiva ordinaria',        euro(r.quotaEffettivaOrdinaria),   'Post riparto'],
+    ['Quota effettiva accessorio',       euro(r.quotaEffettivaAccessorio),  'Post riparto'],
+    ['Quota effettiva tredicesima',      euro(r.quotaEffettivaTredicesima), 'Post riparto'],
+  ];
+  $('pp-tbody').innerHTML =
+    pRows.map(([k,v,n]) => `<tr><td>${k}</td><td>${v}</td><td>${n}</td></tr>`).join('') +
+    `<tr class="total"><td><strong>Totale da trattenere</strong></td><td><strong>${euro(r.quotaEffettivaTotale)}</strong></td><td>${r.alertCapMsg}</td></tr>`;
+}
+
+/* ── Reset ──────────────────────────────────────────────── */
+function resetAll() {
+  document.querySelectorAll('#shellMain input').forEach(i => { i.value=''; });
+  // Reset dynamic lists — keep only default base row
+  ['listBase','listAcc','listTre','listCess'].forEach(id => { $(id).innerHTML=''; });
+  addVoce('base');
+  ['subBase','subAcc','subTre'].forEach(id => { $(id).textContent=euro(0); });
+  currentResult=null; isDirty=false;
+  $('alertErrori').innerHTML=''; $('alertCapienza').className='alert';
+  $('emptyState').style.display=''; $('resultContent').style.display='none';
+  $('reportBody').innerHTML='<tr><td colspan="3"><div class="empty-state" style="padding:1.5rem"><p>Il prospetto sarà generato dopo il calcolo.</p></div></td></tr>';
+  $('accBody').classList.remove('open'); $('accTrigger').setAttribute('aria-expanded','false');
+}
+
+/* ── Export Excel ───────────────────────────────────────── */
+function exportExcel() {
+  if(!currentResult) calcola();
+  const r=currentResult; if(!r||r.errori.length) return;
+  const noteBase=r.vociBase.filter(v=>v.importo>0).map(v=>`${v.label}: ${euro(v.importo)}`).join(' | ')||'—';
+  const noteAcc=r.vociAcc.filter(v=>v.importo>0).map(v=>`${v.label}: ${euro(v.importo)}`).join(' | ')||'—';
+  const noteTre=r.vociTre.filter(v=>v.importo>0).map(v=>`${v.label}: ${euro(v.importo)}`).join(' | ')||'—';
+  const noteCess=r.vociCess.filter(c=>c.importo>0).map(c=>`${c.label}: ${euro(c.importo)}`).join(' | ')||'Nessuna';
+  const dipendente=[
+    ['Comune / Ente', $('pComune').value.trim()||'—'],
+    ['Nome', $('pNome').value.trim()||'—'],
+    ['Cognome', $('pCognome').value.trim()||'—'],
+    ['Codice Fiscale', $('pCF').value.trim()||'—'],
+    ['Matricola', $('pMatricola').value.trim()||'—'],
+    [],
+  ];
+  const data=[
+    ['Calcolatore Pignoramento PA — Prospetto di calcolo'],
+    [],
+    ...dipendente,
+    ['Voce','Valore','Note'],
+    ['Salario netto ordinario',r.salarioBase,noteBase],
+    ['Salario accessorio netto',r.salarioAccessorio,noteAcc],
+    ['Tredicesima netta',r.tredicesima,noteTre],
+    ['Cessioni volontarie',r.totaleCessioni,noteCess],
+    ['Pignoramento esattoriale',r.pignEsattoriale,'Concorrente'],
+    ['Pignoramento ordinario',r.pignOrdinario,'Concorrente'],
+    ['Pignoramento alimentare',r.pignAlimentare,'Separato'],
+    ['Netto totale (Σ salari + cess.)',r.nettoTotale,'Base scaglione e capienza al 50 %'],
+    ['Pignoramenti concorrenti',r.totalePignoramentiConc,'Esattoriale + ordinario'],
+    ['Limite 50 %',r.limiteMeta,'50 % del netto totale'],
+    ['Impegni su capienza',r.impegniSuCapienza,''],
+    ['Residuo pignorabile',r.residuoPignorabile,''],
+    ['Scaglione',r.scaglione,`Aliquota ${(r.aliquotaOrdinaria*100).toFixed(6)} %`],
+    ['Base quota ordinaria',r.baseOrdinaria,'Salari netti + cessioni'],
+    ['Quota teorica ordinaria',r.quotaTeoricaOrdinaria,'Ante capienza'],
+    ['Quota teorica accessorio',r.quotaTeoricaAccessorio,'Ante capienza'],
+    ['Quota teorica tredicesima',r.quotaTeoricaTredicesima,'Ante capienza'],
+    ['Fattore di riparto',r.riparto,''],
+    ['Quota effettiva ordinaria',r.quotaEffettivaOrdinaria,'Post riparto'],
+    ['Quota effettiva accessorio',r.quotaEffettivaAccessorio,'Post riparto'],
+    ['Quota effettiva tredicesima',r.quotaEffettivaTredicesima,'Post riparto'],
+    ['TOTALE DA TRATTENERE',r.quotaEffettivaTotale,r.alertCapMsg],
+  ];
+  const ws=XLSX.utils.aoa_to_sheet(data);
+  ws['!cols']=[{wch:36},{wch:16},{wch:80}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Prospetto');
+  const cf=$('pCF').value.trim()||'noname';
+  XLSX.writeFile(wb,`prospetto-pignoramento-${cf}.xlsx`);
+}
+
+/* ── Events ─────────────────────────────────────────────── */
+$('calcolaBtn').addEventListener('click', calcola);
+$('resetBtn').addEventListener('click', resetAll);
+$('pdfBtn').addEventListener('click', () => {
+  if(!currentResult||!isDirty) calcola();
+  if(currentResult && !currentResult.errori.length) { populatePrint(currentResult); window.print(); }
+  else { window.print(); }
+});
+$('excelBtn').addEventListener('click', exportExcel);
+
+// Live recalc on scalar inputs (only after first Calcola)
+['pignEsatt','pignOrd','pignAlim'].forEach(id => {
+  $(id).addEventListener('input', () => { if(isDirty) calcola(); });
+});
+// Print data fields trigger print re-population
+['pComune','pNome','pCognome','pCF','pMatricola'].forEach(id => {
+  $(id).addEventListener('input', () => { if(currentResult && isDirty) populatePrint(currentResult); });
+});
+
+})();
+</script>
+</body>
+</html>
